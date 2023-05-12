@@ -86,15 +86,13 @@ def measure_executable(path):
         if not match:
             continue
         secname, secsize = match.group(1, 2)
-        key = metric_key_for_section_name(secname)
-        if key:
+        if key := metric_key_for_section_name(secname):
             metrics[key] += int(secsize)
     # Add __LINKEDIT on Darwin, available through size -m
     if sys.platform == "darwin":
         m_output = subprocess.check_output(["size", "-m", "-d", path])
-        linkedit_match = re.search(r"__LINKEDIT: (\d+)", m_output)
-        if linkedit_match:
-            metrics["symbols"] += int(linkedit_match.group(1))
+        if linkedit_match := re.search(r"__LINKEDIT: (\d+)", m_output):
+            metrics["symbols"] += int(linkedit_match[1])
 
     # Humanize and order the resulting metrics
     result = OrderedDict()

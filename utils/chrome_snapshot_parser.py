@@ -97,9 +97,7 @@ def main():
     # The result of this will be the node, and that node's parent, to ascend
     # the stack.
     trace_id_to_node = {}
-    # The root node has trace_node_id 0, to make it easy to break out.
-    trace_tree = root.get("trace_tree", [])
-    if trace_tree:
+    if trace_tree := root.get("trace_tree", []):
         trace_node_stack = [(trace_tree, 0)]
         while trace_node_stack:
             trace_node, parent_id = trace_node_stack.pop()
@@ -128,7 +126,7 @@ def main():
             real_type = EDGE_TYPES[raw_edge_type]
             assert (
                 to_node % len(NODE_FIELDS) == 0
-            ), "to_node in an edge isn't divisible by {}".format(len(NODE_FIELDS))
+            ), f"to_node in an edge isn't divisible by {len(NODE_FIELDS)}"
             edges.append(
                 {
                     "type": real_type,
@@ -158,12 +156,7 @@ def main():
             trace_node, trace_node_id = trace_id_to_node[trace_node_id]
             function_info = trace_node[1]
             allocation_stack.append(
-                "{} at {}:{}:{}".format(
-                    function_info["name"],
-                    function_info["script_name"],
-                    function_info["line"],
-                    function_info["column"],
-                )
+                f'{function_info["name"]} at {function_info["script_name"]}:{function_info["line"]}:{function_info["column"]}'
             )
         if allocation_stack:
             # Reverse the stack, so that the first element is the topmost entry

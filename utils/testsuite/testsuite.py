@@ -272,8 +272,7 @@ def generateSource(content, strict, suite, flags):
             includes = ["assert.js", "sta.js"]
             if match:
                 includes += [i.strip() for i in match.group(1).split(",")]
-            match = specialIncludesMatcher.search(content)
-            if match:
+            if match := specialIncludesMatcher.search(content):
                 includes.append(match.group(1))
             for i in includes:
                 filepath = path.join(suite, "harness", i)
@@ -321,13 +320,14 @@ featuresMatcher2 = re.compile(r"\s*features:\s*\n(.*)\*\/", re.MULTILINE | re.DO
 
 
 def getSuite(filename):
-    suite = None
-    # Try all possible test suites to see which one we're in.
-    for s in ["test262", "mjsunit", "CVEs", "esprima", "flow"]:
-        if (s + "/") in filename:
-            suite = filename[: filename.find(s) + len(s)]
-            break
-    return suite
+    return next(
+        (
+            filename[: filename.find(s) + len(s)]
+            for s in ["test262", "mjsunit", "CVEs", "esprima", "flow"]
+            if f"{s}/" in filename
+        ),
+        None,
+    )
 
 
 verbose = False
@@ -349,7 +349,7 @@ def showStatus(filename):
     global completed, istty, verbose, count
     if istty and not verbose and count > 0:
         with completed.get_lock():
-            record = ("\r{:" + str(ttyWidth) + "s}\n").format("Testing " + filename)
+            record = ("\r{:" + str(ttyWidth) + "s}\n").format(f"Testing {filename}")
             status = "{:06.2f}% ({:d} / {:d})".format(
                 100.0 * completed.value / count, completed.value, count
             )
@@ -357,7 +357,7 @@ def showStatus(filename):
             sys.stdout.flush()
             completed.value += 1
     else:
-        print("Testing " + filename)
+        print(f"Testing {filename}")
 
 
 es6_args = ["-bs", "-Xes6-promise", "-Xes6-proxy"]
@@ -368,15 +368,13 @@ extra_compile_flags = ["-bs", "-fno-static-builtins"]
 
 
 def fileInSkiplist(filename, skiplist):
-    for blName in skiplist:
-        if isinstance(blName, str):
-            if blName in filename:
-                return True
-        else:
-            # Assume it's a regex if it's not a string.
-            if blName.search(filename):
-                return True
-    return False
+    return any(
+        isinstance(blName, str)
+        and blName in filename
+        or not isinstance(blName, str)
+        and blName.search(filename)
+        for blName in skiplist
+    )
 
 
 # should_run: bool, If the test should run
@@ -400,25 +398,20 @@ def testShouldRun(filename, content):
 
     if not suite:
         strictModes = [False]
-    else:
-        if "test262" in suite:
-            match = flagsMatcher.search(content)
-            if match:
-                flags = {flag.strip() for flag in match.group(1).split(",")}
-                if "onlyStrict" in flags:
-                    strictModes = [True]
-                elif "noStrict" in flags or "raw" in flags:
-                    strictModes = [False]
-                else:
-                    strictModes = [True, False]
-            else:
-                strictModes = [True, False]
-        elif "mjsunit" in suite:
-            strictModes = [False]
-        elif "CVEs" in suite:
+    elif "test262" in suite and (match := flagsMatcher.search(content)):
+        flags = {flag.strip() for flag in match.group(1).split(",")}
+        if "onlyStrict" in flags:
+            strictModes = [True]
+        elif "noStrict" in flags or "raw" in flags:
             strictModes = [False]
         else:
-            raise Exception("Unknown suite")
+            strictModes = [True, False]
+    elif "test262" in suite and not (match := flagsMatcher.search(content)):
+        strictModes = [True, False]
+    elif "mjsunit" in suite or "CVEs" in suite:
+        strictModes = [False]
+    else:
+        raise Exception("Unknown suite")
 
     # Now find if this test case should be skipped.
 
@@ -473,7 +466,7 @@ def testShouldRun(filename, content):
             if f in UNSUPPORTED_FEATURES + PERMANENT_UNSUPPORTED_FEATURES:
                 return TestContentParameters(
                     False,
-                    "Skipping unsupported feature: " + f,
+                    f"Skipping unsupported feature: {f}",
                     f in PERMANENT_UNSUPPORTED_FEATURES,
                     flags,
                     strictModes,

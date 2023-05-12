@@ -46,16 +46,16 @@ for idx, base_line in enumerate(base_lines):
             sys.stderr.write("compare line does not match expected format\n")
             sys.exit(1)
 
-        if base_match.group(1) != compare_match.group(1):
+        if base_match[1] != compare_match[1]:
             sys.stderr.write("function name does not match\n")
             sys.exit(1)
 
-        base_file_name = os.path.basename(base_match.group(2))
-        compare_file_name = os.path.basename(compare_match.group(2))
+        base_file_name = os.path.basename(base_match[2])
+        compare_file_name = os.path.basename(compare_match[2])
         if base_file_name != compare_file_name:
             sys.stderr.write("File name does not match\n")
             sys.exit(1)
 
-        if base_match.group(3) != compare_match.group(3):
+        if base_match[3] != compare_match[3]:
             sys.stderr.write("line number does not match\n")
             sys.exit(1)

@@ -20,7 +20,7 @@ class GoogleTest(TestFormat):
             exe_suffix += '.exe'
 
         # Also check for .py files for testing purposes.
-        self.test_suffixes = {exe_suffix, test_suffix + '.py'}
+        self.test_suffixes = {exe_suffix, f'{test_suffix}.py'}
 
     def getGTestTests(self, path, litConfig, localConfig):
         """getGTestTests(path) - [name]
@@ -71,8 +71,7 @@ class GoogleTest(TestFormat):
             ln = ln[index*2:]
             if ln.endswith('.'):
                 nested_tests.append(ln)
-            elif any([name.startswith('DISABLED_')
-                      for name in nested_tests + [ln]]):
+            elif any(name.startswith('DISABLED_') for name in nested_tests + [ln]):
                 # Gtest will internally skip these tests. No need to launch a
                 # child process for it.
                 continue
@@ -102,9 +101,9 @@ class GoogleTest(TestFormat):
             # Handle GTest parametrized and typed tests, whose name includes
             # some '/'s.
             testPath, namePrefix = os.path.split(testPath)
-            testName = namePrefix + '/' + testName
+            testName = f'{namePrefix}/{testName}'
 
-        cmd = [testPath, '--gtest_filter=' + testName]
+        cmd = [testPath, f'--gtest_filter={testName}']
         cmd = self.maybeAddPythonToCmd(cmd)
         if litConfig.useValgrind:
             cmd = litConfig.valgrindArgs + cmd
@@ -117,10 +116,10 @@ class GoogleTest(TestFormat):
                 cmd, env=test.config.environment,
                 timeout=litConfig.maxIndividualTestTime)
         except lit.util.ExecuteCommandTimeoutException:
-            return (lit.Test.TIMEOUT,
-                    'Reached timeout of {} seconds'.format(
-                        litConfig.maxIndividualTestTime)
-                   )
+            return (
+                lit.Test.TIMEOUT,
+                f'Reached timeout of {litConfig.maxIndividualTestTime} seconds',
+            )
 
         if exitCode:
             return lit.Test.FAIL, out + err
@@ -140,6 +139,4 @@ class GoogleTest(TestFormat):
         Windows, so add the python executable to the command if this is a .py
         script.
         """
-        if cmd[0].endswith('.py'):
-            return [sys.executable] + cmd
-        return cmd
+        return [sys.executable] + cmd if cmd[0].endswith('.py') else cmd

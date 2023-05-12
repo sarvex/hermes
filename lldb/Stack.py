@@ -25,9 +25,7 @@ def _raise_failure(msg):
 
 def _raise_eval_failure(expression, error):
     _raise_failure(
-        "Fail to evaluate {}: \n{}".format(
-            expression, "<N/A>" if error is None else error.GetCString()
-        )
+        f'Fail to evaluate {expression}: \n{"<N/A>" if error is None else error.GetCString()}'
     )
 
 
@@ -68,7 +66,7 @@ def _get_profiler_instance_expr(frame):
 
 def _get_hermes_runtime_expr(frame):
     """Return the evaluation expression for getting Hermes runtime"""
-    return _get_profiler_instance_expr(frame) + "->threadLocalRuntime_.get()"
+    return f"{_get_profiler_instance_expr(frame)}->threadLocalRuntime_.get()"
 
 
 def _get_stdstring_summary(str_val):
@@ -121,9 +119,7 @@ def dump_js_stack(debugger, command, result, internal_dict):
         if len(command_args) == 1
         else _heuristic_search_ip_in_stack(leaf_frame)
     )
-    expression = _get_hermes_runtime_expr(
-        leaf_frame
-    ) + "->getCallStackNoAlloc((const hermes::inst::Inst *){})".format(ip)
+    expression = f"{_get_hermes_runtime_expr(leaf_frame)}->getCallStackNoAlloc((const hermes::inst::Inst *){ip})"
     result_str_value = _evaluate_expression(leaf_frame, expression)
 
     str_summary = _get_stdstring_summary(result_str_value)

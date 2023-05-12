@@ -90,14 +90,9 @@ def run_interval(unicode_data_lines, args):
             if not openi:
                 begin = cp
                 openi = True
-            else:
-                pass  # do nothing we are still in interval
-        else:
-            if openi:
-                intervals.append((begin, last_cp))
-                openi = False
-            else:
-                pass  # keep looking
+        elif openi:
+            intervals.append((begin, last_cp))
+            openi = False
         last_cp = cp
 
     if openi:
@@ -261,16 +256,13 @@ class CaseMap(object):
         """Canonicalize a character per ES9 21.2.2.8.2."""
         if unicode:
             return self.folds[ch]
-        else:
-            upper_ch = self.toupper[ch]
+        upper_ch = self.toupper[ch]
             # "If u does not consist of a single character, return ch"
             # We only store 1-1 mappings.
             # "If ch's code unit value is greater than or equal to decimal 128
             # and cu's code unit value is less than decimal 128, then return ch"
             # That is, only ASCII may canonicalize to ASCII.
-            if upper_ch < 128 and ch >= 128:
-                return ch
-            return upper_ch
+        return ch if upper_ch < 128 and ch >= 128 else upper_ch
 
 
 def print_canonicalizations(casemap, unicode):
@@ -297,15 +289,15 @@ ${entry_text}
 
 
 if __name__ == "__main__":
-    print("Fetching %s..." % UNICODE_DATA_URL, file=sys.stderr)
+    print(f"Fetching {UNICODE_DATA_URL}...", file=sys.stderr)
     with urllib.request.urlopen(UNICODE_DATA_URL) as f:
         unicode_data = f.read()
 
-    print("Fetching %s..." % UNICODE_SPECIAL_CASING_URL, file=sys.stderr)
+    print(f"Fetching {UNICODE_SPECIAL_CASING_URL}...", file=sys.stderr)
     with urllib.request.urlopen(UNICODE_SPECIAL_CASING_URL) as f:
         special_casing = f.read()
 
-    print("Fetching %s..." % UNICODE_CASE_FOLDING_URL, file=sys.stderr)
+    print(f"Fetching {UNICODE_CASE_FOLDING_URL}...", file=sys.stderr)
     with urllib.request.urlopen(UNICODE_CASE_FOLDING_URL) as f:
         case_folding = f.read()
 

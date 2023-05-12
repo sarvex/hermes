@@ -37,11 +37,11 @@ def grouped_section_access_info(sections):
     This function produces a list of tuples, each containing a string, and
     a list of access times.
     """
-    groups = []
     info = section_access_info(sections)
-    for label, group in groupby(info, key=lambda a: a[0]):
-        groups.append((label, [(offset, time) for _, offset, time in group]))
-    return groups
+    return [
+        (label, [(offset, time) for _, offset, time in group])
+        for label, group in groupby(info, key=lambda a: a[0])
+    ]
 
 
 MAX_LABEL_WIDTH = 25
@@ -78,11 +78,7 @@ def display_all(grouped_accesses, display_offsets, display_time):
     FMT = "{} -- {}us"
     for group_label, accesses in grouped_accesses:
         for offset, time in accesses:
-            if display_offsets:
-                label = "{} @ {}".format(group_label, offset)
-            else:
-                label = group_label
-
+            label = f"{group_label} @ {offset}" if display_offsets else group_label
             if not display_time:
                 print(label)
                 continue

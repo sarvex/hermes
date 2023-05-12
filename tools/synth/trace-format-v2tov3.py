@@ -17,22 +17,16 @@ def parse_value_id(value):
     colonInd = value.find(":")
     if colonInd == -1:
         return None
-    tag = value[0:colonInd]
-    if tag == "object":
-        return int(value[colonInd + 1 :])
-    else:
-        return None
+    tag = value[:colonInd]
+    return int(value[colonInd + 1 :]) if tag == "object" else None
 
 
 def parse_value_string(value):
     colonInd = value.find(":")
     if colonInd == -1:
         return None
-    tag = value[0:colonInd]
-    if tag == "string":
-        return value[colonInd + 1 :]
-    else:
-        return None
+    tag = value[:colonInd]
+    return value[colonInd + 1 :] if tag == "string" else None
 
 
 def max_obj_id(trace):
@@ -100,7 +94,7 @@ def transform_trace_work(trace, maxObjID):
                 valueString = parse_value_string(rec[key])
                 if valueString is not None:
                     out.append(new_create_string_record(valueString, curObjID))
-                    rec[key] = "string:" + str(curObjID)
+                    rec[key] = f"string:{str(curObjID)}"
                     curObjID += 1
             elif key in ["args", "properties"]:
                 newArr = []
@@ -108,7 +102,7 @@ def transform_trace_work(trace, maxObjID):
                     valueString = parse_value_string(val)
                     if valueString is not None:
                         out.append(new_create_string_record(valueString, curObjID))
-                        newArr.append("string:" + str(curObjID))
+                        newArr.append(f"string:{str(curObjID)}")
                         curObjID += 1
                     else:
                         newArr.append(val)

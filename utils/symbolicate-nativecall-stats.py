@@ -52,7 +52,7 @@ def findOffset(name):
     s.wait()
 
     if not offset:
-        print("Could not find offset of function %s in %s" % (name, hermes))
+        print(f"Could not find offset of function {name} in {hermes}")
         exit(1)
 
     return offset
@@ -61,7 +61,9 @@ def findOffset(name):
 def symbolicate(rows, baseOffset):
     """Symbolicate and print the updated table, which is modified inplace"""
     s = subprocess.Popen(
-        [symbolizer, "--obj=" + hermes], stdout=subprocess.PIPE, stdin=subprocess.PIPE
+        [symbolizer, f"--obj={hermes}"],
+        stdout=subprocess.PIPE,
+        stdin=subprocess.PIPE,
     )
 
     for toks in rows:
@@ -94,8 +96,7 @@ def main(argv):
     global symbolizer, hermes, objdump
     if len(argv) < 3 or len(argv) > 4:
         print(
-            "Syntax: %s path-to-llvm-symbolizer path-to-hermes [path-to-objdump]"
-            % argv[0]
+            f"Syntax: {argv[0]} path-to-llvm-symbolizer path-to-hermes [path-to-objdump]"
         )
         exit(1)
 

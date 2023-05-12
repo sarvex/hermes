@@ -104,12 +104,12 @@ class HermesValue:
         return int(f) if f.is_integer() else f
 
     def __str__(self):
-        ret_fmt_str = "{}, {}"
         tag_fmt_str = "Tag: {}"
         value_fmt_str = "Value: {}"
         if self.is_number():
             formatted_tagname = tag_fmt_str.format("Number")
             formatted_value = value_fmt_str.format(self.get_number())
+            ret_fmt_str = "{}, {}"
             return ret_fmt_str.format(formatted_tagname, formatted_value)
 
         tag = self.get_extended_tag()
@@ -129,9 +129,7 @@ class HermesValue:
             # Display both as hex and as decimal, since native values could be
             # either a pointer or an int.
             formatted_value = value_fmt_str.format(
-                "{} ({})".format(
-                    hex(self.raw & self.DATA_MASK), self.raw & self.DATA_MASK
-                )
+                f"{hex(self.raw & self.DATA_MASK)} ({self.raw & self.DATA_MASK})"
             )
         elif tag.raw in ExtendedTag.POINTER_TAGS:
             # Just display the pointer value.
@@ -139,7 +137,7 @@ class HermesValue:
             # using the C++ API to access the heap, which can't be done here.
             formatted_value = value_fmt_str.format(hex(self.raw & self.DATA_MASK))
 
-        return "{}, {}".format(formatted_tagname, formatted_value)
+        return f"{formatted_tagname}, {formatted_value}"
 
 
 def hv_type_format(valobj, _):
@@ -152,9 +150,7 @@ def hv_type_format(valobj, _):
 
 def _raise_eval_failure(expression, error):
     raise Exception(
-        "Fail to evaluate {}: \n{}".format(
-            expression, "<N/A>" if error is None else error.GetCString()
-        )
+        f'Fail to evaluate {expression}: \n{"<N/A>" if error is None else error.GetCString()}'
     )
 
 
@@ -182,8 +178,8 @@ def hv_format(debugger, command, result, internal_dict):
     try:
         args = [_evaluate_expression(frame, expr) for expr in args]
     except Exception as e:
-        print(str(e), file=result)
+        print(e, file=result)
         return
 
     for arg in args:
-        print(str(HermesValue(arg.GetValueAsUnsigned())), file=result)
+        print(HermesValue(arg.GetValueAsUnsigned()), file=result)

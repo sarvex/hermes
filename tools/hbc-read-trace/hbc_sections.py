@@ -89,8 +89,7 @@ def raw_sections(hbcdump, bytecode):
     ranges = subprocess.check_output([hbcdump, "-show-section-ranges", bytecode])
 
     for line in ranges.decode().split("\n"):
-        sect = parse_section(line)
-        if sect:
+        if sect := parse_section(line):
             yield sect
 
 

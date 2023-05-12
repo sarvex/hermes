@@ -22,7 +22,7 @@ def to_double(n):
 def double_to_bytes(f):
     """Split f into a sequence of 8 bytes."""
     assert type(f) is float, type(f)
-    return [c for c in struct.pack("!d", f)]
+    return list(struct.pack("!d", f))
 
 
 def bitcast_double_to_int(f):
@@ -57,7 +57,7 @@ def int_to_digits(n):
     # either n == 0 (if the original n >= 0) or when n == -1 (if the original
     # n <= -1).
     n_bytes = []
-    while n != 0 and n != -1:
+    while n not in [0, -1]:
         n_bytes.append(n & 0xFF)
         n >>= 8
 
@@ -82,13 +82,10 @@ def int_to_digits(n):
     # Digits is the sequence of "digits([bytes])" strings that will become the
     # input to the test.
     digits = []
-    i = 0
-    while i < len(n_bytes):
+    for i in range(0, len(n_bytes), 8):
         curr_digit = n_bytes[i : min(len(n_bytes), i + 8)]
         curr_digit.reverse()
         digits.append(f"digit({', '.join('0x{:0>2x}'.format(x) for x in curr_digit)})")
-        i += 8
-
     # Reversing digits so the most significant digit is digit[0].
     digits.reverse()
 
@@ -117,9 +114,9 @@ def print_expectation(d, curr_level=0):
     if d == 0:
         level_print("zero,", level=curr_level + 1)
     elif d == float("inf"):
-        level_print(f"infinity,", level=curr_level + 1)
+        level_print("infinity,", level=curr_level + 1)
     elif d == -float("inf"):
-        level_print(f"neg_infinity,", level=curr_level + 1)
+        level_print("neg_infinity,", level=curr_level + 1)
     else:
         c = double_to_components(d)
         level_print(
@@ -250,11 +247,11 @@ print(
 )
 # Use step=3 to avoid test explosion while getting good coverage.
 for i in range(52, 128, 3):
-    test_mantissa = test_mantissa[:-1] + "0"
+    test_mantissa = f"{test_mantissa[:-1]}0"
     print_test(bn(test_mantissa, i))
     print_test(-bn(test_mantissa, i))
 
-    test_mantissa = test_mantissa[:-1] + "1"
+    test_mantissa = f"{test_mantissa[:-1]}1"
     print_test(bn(test_mantissa, i))
     print_test(-bn(test_mantissa, i))
 
@@ -277,44 +274,44 @@ print(
 )
 for i in range(53, 128, 41):
     print("// L=0, M=0 -> never round")
-    test_mantissa = test_mantissa[:-2] + "00"
+    test_mantissa = f"{test_mantissa[:-2]}00"
     print_test(bn(test_mantissa, i) + 1)
     print_test(-bn(test_mantissa, i) - 1)
 
     print("// L=0, M=1 -> round if d != 0")
-    test_mantissa = test_mantissa[:-2] + "01"
+    test_mantissa = f"{test_mantissa[:-2]}01"
     print_test(bn(test_mantissa, i) + 1)
     print_test(-bn(test_mantissa, i) - 1)
 
     print("// L=1, M=0 -> never round")
-    test_mantissa = test_mantissa[:-2] + "10"
+    test_mantissa = f"{test_mantissa[:-2]}10"
     print_test(bn(test_mantissa, i) + 1)
     print_test(-bn(test_mantissa, i) - 1)
 
     print("// L=1, M=1 -> always round")
-    test_mantissa = test_mantissa[:-2] + "11"
+    test_mantissa = f"{test_mantissa[:-2]}11"
     print_test(bn(test_mantissa, i) + 1)
     print_test(-bn(test_mantissa, i) - 1)
 
 
 for i in range(128, 1024, 499):
     print("// L=0, M=0 -> never round")
-    test_mantissa = test_mantissa[:-2] + "00"
+    test_mantissa = f"{test_mantissa[:-2]}00"
     print_test(bn(test_mantissa, i) + (1 << 87))
     print_test(-bn(test_mantissa, i) - (1 << 93))
 
     print("// L=0, M=1 -> round if d != 0")
-    test_mantissa = test_mantissa[:-2] + "01"
+    test_mantissa = f"{test_mantissa[:-2]}01"
     print_test(bn(test_mantissa, i) + (1 << 103))
     print_test(-bn(test_mantissa, i) - (1 << 73))
 
     print("// L=1, M=0 -> never round")
-    test_mantissa = test_mantissa[:-2] + "10"
+    test_mantissa = f"{test_mantissa[:-2]}10"
     print_test(bn(test_mantissa, i) + (1 << 115))
     print_test(-bn(test_mantissa, i) - (1 << 71))
 
     print("// L=1, M=1 -> always round")
-    test_mantissa = test_mantissa[:-2] + "11"
+    test_mantissa = f"{test_mantissa[:-2]}11"
     print_test(bn(test_mantissa, i) + (1 << 123))
     print_test(-bn(test_mantissa, i) - (1 << 101))
 

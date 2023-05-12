@@ -84,16 +84,11 @@ class Accumulation:
         """Sums up all uses for a group name."""
         assert groupName in self.groups
         group = self.groups[groupName]
-        m = {}
-        m["name"] = groupName
-        m["usage"] = self.subtotal("", groupName, group)
-        return m
+        return {"name": groupName, "usage": self.subtotal("", groupName, group)}
 
     def subtotal(self, path, groupName, group):
         """Recursively calculates subtotals for each nested category."""
-        total = {}
-        total["sum"] = {}
-
+        total = {"sum": {}}
         if LEAFNODE in group:
             private = shared = amortized = 0.0
 
@@ -115,9 +110,7 @@ class Accumulation:
 
         total["itemized"] = {}
         for key in group:
-            total["itemized"][key] = self.subtotal(
-                path + ":" + key, groupName, group[key]
-            )
+            total["itemized"][key] = self.subtotal(f"{path}:{key}", groupName, group[key])
             for k in total["itemized"][key]["sum"]:
                 total["sum"][k] = (
                     total["sum"].get(k, 0) + total["itemized"][key]["sum"][k]
@@ -126,9 +119,7 @@ class Accumulation:
 
     def getResult(self):
         """Get all groups in a single object that can be JSON serialized."""
-        groups = []
-        for group in self.groups.keys():
-            groups.append(self.tally(group))
+        groups = [self.tally(group) for group in self.groups.keys()]
         return {"attribution": groups}
 
 

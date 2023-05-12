@@ -134,16 +134,15 @@ class EsprimaTestRunner:
             ast["key"]["type"] = "PrivateIdentifier"
             ast["computed"] = False
             ast["static"] = False
-        if ast["type"] == "ClassProperty" or ast["type"] == "ClassPrivateProperty":
+        if ast["type"] in ["ClassProperty", "ClassPrivateProperty"]:
             if not ast["optional"]:
                 del ast["optional"]
             ast["type"] = "PropertyDefinition"
         if ast["type"] == "TupleTypeAnnotation":
             ast["elementTypes"] = ast["types"]
             del ast["types"]
-        if ast["type"] == "TupleTypeLabeledElement":
-            if not ast["optional"]:
-                del ast["optional"]
+        if ast["type"] == "TupleTypeLabeledElement" and not ast["optional"]:
+            del ast["optional"]
         # convert the literal node types to ESTree standard form
         if ast["type"] in HERMES_LITERAL_NODE_TYPES:
             if ast["type"] == "NullLiteral":
@@ -161,11 +160,13 @@ class EsprimaTestRunner:
     # process an esprima ast to make it more regular for diffing
     def process_esprima_ast(self, ast):
         if isinstance(ast, dict):
-            if "type" in ast and ast["type"] == "ExpressionStatement":
-                # If the expression is a string, esprima will set the string to
-                # the 'directive' field. Even if it's not 'use strict'
-                if "directive" in ast and ast["directive"] != "use strict":
-                    del ast["directive"]
+            if (
+                "type" in ast
+                and ast["type"] == "ExpressionStatement"
+                and "directive" in ast
+                and ast["directive"] != "use strict"
+            ):
+                del ast["directive"]
             if "type" in ast:
                 # If it is a regexp literal, the 'value' field is unnecessary and
                 # Hermes does not have it.
@@ -178,12 +179,15 @@ class EsprimaTestRunner:
                 if ast["type"] == "SpreadProperty":
                     ast["type"] = "SpreadElement"
                 if (
-                    ast["type"] == "ClassProperty"
-                    or ast["type"] == "ClassPrivateProperty"
-                    or ast["type"] == "PropertyDefinition"
+                    ast["type"]
+                    in [
+                        "ClassProperty",
+                        "ClassPrivateProperty",
+                        "PropertyDefinition",
+                    ]
+                    and "declare" not in ast
                 ):
-                    if "declare" not in ast:
-                        ast["declare"] = False
+                    ast["declare"] = False
             # If it is a template literal, the 'value' field contains
             # the 'cooked' and 'raw' strings, which should be moved.
             if "type" in ast and ast["type"] == "TemplateLiteral" and "quasis" in ast:
@@ -215,8 +219,6 @@ class EsprimaTestRunner:
             self.printDebug(f"Expected {type(node2)}, found {type(node1)}")
             if isinstance(node2, dict):
                 self.printDebug(f"  in {node2['type']}")
-            elif isinstance(node2, dict):
-                self.printDebug(f"  in Hermes {node1['type']}")
             return False
         if isinstance(node1, dict):
             # Check if Hermes is missing keys.
@@ -239,22 +241,17 @@ class EsprimaTestRunner:
                     # the expected AST if they have no value anyway.
                     self.printDebug(f"{node1['type']} extra property: {key}")
                     return False
-            return True
         elif isinstance(node1, list):
             if len(node1) != len(node2):
-                self.printDebug(
-                    "List expected {} elements, found {}".format(len(node2), len(node1))
-                )
+                self.printDebug(f"List expected {len(node2)} elements, found {len(node1)}")
                 return False
             for i in range(len(node1)):
                 if not self.compare_nodes(suite, node1[i], node2[i]):
                     return False
-            return True
-        else:
-            if node1 != node2:
-                self.printDebug("Expected {}, found {}".format(node2, node1))
-                return False
-            return True
+        elif node1 != node2:
+            self.printDebug(f"Expected {node2}, found {node1}")
+            return False
+        return True
 
     # Remove nodes that should be omitted when diffing the outputs.
     # For debugging purposes.
@@ -279,9 +276,7 @@ class EsprimaTestRunner:
                     res[key] = self.trim_ast(val, is_hermes)
             return res
         if isinstance(node, list):
-            res = []
-            for elt in node:
-                res.append(self.trim_ast(elt, is_hermes))
+            res = [self.trim_ast(elt, is_hermes) for elt in node]
             return res
         else:
             return node
@@ -313,18 +308,18 @@ class EsprimaTestRunner:
         filename_stem = ""
         if testfile.endswith(".source.js"):
             filename_stem = testfile[:-10]
-        else:
-            if not testfile.endswith(".js"):
-                raise TypeError("Not a valid test case.")
+        elif testfile.endswith(".js"):
             # file name only ends with '.js'
             filename_stem = testfile[:-3]
-        tree_file = filename_stem + ".tree.json"
+        else:
+            raise TypeError("Not a valid test case.")
+        tree_file = f"{filename_stem}.tree.json"
         if isfile(tree_file):
             return tree_file
-        failure_file = filename_stem + ".failure.json"
+        failure_file = f"{filename_stem}.failure.json"
         if isfile(failure_file):
             return failure_file
-        token_file = filename_stem + ".tokens.json"
+        token_file = f"{filename_stem}.tokens.json"
         if isfile(token_file):
             return token_file
         self.printDebug("no expected file for:", testfile)
@@ -334,50 +329,44 @@ class EsprimaTestRunner:
     def parseSource(self, suite, hermes, filename, transformed=False):
         extra_args = []
         if "flow" in suite:
-            extra_args.append("-parse-flow")
-            extra_args.append("-parse-jsx")
-            extra_args.append("-Xinclude-empty-ast-nodes")
+            extra_args.extend(("-parse-flow", "-parse-jsx", "-Xinclude-empty-ast-nodes"))
         elif "JSX" in filename:
             extra_args.append("-parse-jsx")
         extra_args.append("-dump-transformed-ast" if transformed else "-dump-ast")
         args = [hermes] + COMPILER_ARGS + extra_args
-        # ".source.js" files has the format of "var source = \"...\";", and
-        # the value of the 'source' variable should be the input to the parser.
-        # So we evaluate the source with Hermes first and then parse the output.
-        if ".source.js" in filename:
-            with open(filename, "rb") as f:
-                with tempfile.NamedTemporaryFile() as to_evaluate:
-                    # append to the original source to print the 'source' variable.
-                    for line in f:
-                        to_evaluate.write(line)
-                    to_evaluate.write(b"print(source);")
-                    to_evaluate.flush()
-                    with tempfile.NamedTemporaryFile() as evaluated:
-                        # evaluate the source to get the actual test input.
-                        evaluate_cmd = [hermes, to_evaluate.name]
-                        evaluate_res = subprocess.run(
-                            evaluate_cmd,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            timeout=HERMES_TIMEOUT,
-                        )
-                        # get rid of the newline added by print().
-                        evaluated.write(evaluate_res.stdout.strip())
-                        evaluated.flush()
-                        # run the test through Hermes parser.
-                        return subprocess.run(
-                            args + [evaluated.name],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            timeout=HERMES_TIMEOUT,
-                        )
-        else:
+        if ".source.js" not in filename:
             return subprocess.run(
                 args + [filename],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 timeout=HERMES_TIMEOUT,
             )
+        with open(filename, "rb") as f:
+            with tempfile.NamedTemporaryFile() as to_evaluate:
+                # append to the original source to print the 'source' variable.
+                for line in f:
+                    to_evaluate.write(line)
+                to_evaluate.write(b"print(source);")
+                to_evaluate.flush()
+                with tempfile.NamedTemporaryFile() as evaluated:
+                    # evaluate the source to get the actual test input.
+                    evaluate_cmd = [hermes, to_evaluate.name]
+                    evaluate_res = subprocess.run(
+                        evaluate_cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        timeout=HERMES_TIMEOUT,
+                    )
+                    # get rid of the newline added by print().
+                    evaluated.write(evaluate_res.stdout.strip())
+                    evaluated.flush()
+                    # run the test through Hermes parser.
+                    return subprocess.run(
+                        args + [evaluated.name],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        timeout=HERMES_TIMEOUT,
+                    )
 
     # There are three types of tests: correct tests, error tests, and token tests.
     # The files of expected output that ends with ".tree.json" has the expected AST,
@@ -430,7 +419,7 @@ class EsprimaTestRunner:
             else:
                 return (
                     TestStatus.TEST_SKIPPED,
-                    "skip unsupported {} test".format(expected_filename.split(".")[-2]),
+                    f'skip unsupported {expected_filename.split(".")[-2]} test',
                 )
         except subprocess.TimeoutExpired:
             return (TestStatus.TEST_TIMEOUT, "test time out")

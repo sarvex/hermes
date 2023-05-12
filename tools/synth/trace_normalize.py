@@ -60,21 +60,21 @@ def parseNumberFromValue(v: str) -> Union[int, float]:
 
 
 def createObject(objID: int) -> str:
-    return "object:" + str(objID)
+    return f"object:{objID}"
 
 
 def createPropNameID(propID: int) -> str:
-    return "propNameID:" + str(propID)
+    return f"propNameID:{propID}"
 
 
 def createString(stringID: int) -> str:
-    return "string:" + str(stringID)
+    return f"string:{stringID}"
 
 
 def createNumber(num: float) -> str:
     # This might be an imprecise notation, but it is more human-readable than
     # the precise version.
-    return "number:" + str(num)
+    return f"number:{num}"
 
 
 class Normalizer:
@@ -106,21 +106,6 @@ class Normalizer:
             return v
 
     def normalize_rec(self, rec):
-        # These should be kept in sync with changes to SynthTrace.h.
-        # Hopefully there is never a key that is used for both objects and
-        # non-objects (in different records).
-        # If there is a conflict between two keys with the same name and
-        # different value types:
-        # * if it is another number it will cause a failure at runtime
-        # * if it is a string it will cause a failure at parse time
-        OBJECT_HOLDING_KEYS = [
-            "objID",
-            "functionID",
-            "hostObjectID",
-            "propNamesID",
-            "propID",
-            "propNameID",
-        ]
         VALUE_HOLDING_KEYS = ["value", "retval"]
         if rec.get("type", "") == "CreatePropNameIDRecord":
             # PropNameIDs might get different IDs for the same string depending
@@ -128,14 +113,29 @@ class Normalizer:
             # traces. Normalize them more aggressively by using the string
             # contents to map to an ID.
             objID = rec["objID"]
-            chars = rec["chars"]
             if objID not in self.normal:
+                chars = rec["chars"]
                 if chars in self.string_normal:
                     self.normal[objID] = self.string_normal[chars]
                 else:
                     self.string_normal[chars] = self.normal[objID]
             rec["objID"] = self.normal[objID]
         else:
+            # These should be kept in sync with changes to SynthTrace.h.
+            # Hopefully there is never a key that is used for both objects and
+            # non-objects (in different records).
+            # If there is a conflict between two keys with the same name and
+            # different value types:
+            # * if it is another number it will cause a failure at runtime
+            # * if it is a string it will cause a failure at parse time
+            OBJECT_HOLDING_KEYS = [
+                "objID",
+                "functionID",
+                "hostObjectID",
+                "propNamesID",
+                "propID",
+                "propNameID",
+            ]
             for objkey in OBJECT_HOLDING_KEYS:
                 if objkey in rec:
                     rec[objkey] = self.normal[rec[objkey]]

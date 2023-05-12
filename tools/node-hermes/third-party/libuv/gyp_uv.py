@@ -30,8 +30,7 @@ def host_arch():
   if machine == 'AMD64': return 'x64'
   if machine == 'x86_64': return 'x64'
   if machine.startswith('arm'): return 'arm'
-  if machine.startswith('mips'): return 'mips'
-  return machine  # Return as-is and hope for the best.
+  return 'mips' if machine.startswith('mips') else machine
 
 
 def run_gyp(args):
@@ -44,21 +43,21 @@ def run_gyp(args):
 if __name__ == '__main__':
   args = sys.argv[1:]
   args.extend('-I common.gypi test/test.gyp'.split(' '))
-  args.append('--depth=' + uv_root)
+  args.append(f'--depth={uv_root}')
 
   # There's a bug with windows which doesn't allow this feature.
   if sys.platform != 'win32':
     if '-f' not in args:
       args.extend('-f make'.split())
     if 'eclipse' not in args and 'ninja' not in args:
-      args.extend(['-Goutput_dir=' + output_dir])
+      args.extend([f'-Goutput_dir={output_dir}'])
       args.extend(['--generator-output', output_dir])
 
   if not any(a.startswith('-Dhost_arch=') for a in args):
-    args.append('-Dhost_arch=%s' % host_arch())
+    args.append(f'-Dhost_arch={host_arch()}')
 
   if not any(a.startswith('-Dtarget_arch=') for a in args):
-    args.append('-Dtarget_arch=%s' % host_arch())
+    args.append(f'-Dtarget_arch={host_arch()}')
 
   if not any(a.startswith('-Duv_library=') for a in args):
     args.append('-Duv_library=static_library')

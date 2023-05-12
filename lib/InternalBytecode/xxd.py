@@ -27,7 +27,7 @@ def main():
 
     # Ensure the file exists before writing out anything
     if not path.exists(args.file):
-        raise Exception('File "{}" doesn\'t exist'.format(args.file))
+        raise Exception(f"""File "{args.file}" doesn\'t exist""")
 
     with open(args.file, "rb") as f:
         # Could read in chunks instead for extra performance, but this script

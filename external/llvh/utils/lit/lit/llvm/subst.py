@@ -24,9 +24,8 @@ class FindTool(object):
         if self.name == 'llc' and os.environ.get('LLVM_ENABLE_MACHINE_VERIFIER') == '1':
             command += ' -verify-machineinstrs'
         elif self.name == 'llvm-go':
-            exe = getattr(config.config, 'go_executable', None)
-            if exe:
-                command += ' go=' + exe
+            if exe := getattr(config.config, 'go_executable', None):
+                command += f' go={exe}'
         return command
 
 
@@ -120,28 +119,25 @@ class ToolSubst(object):
         if command_str:
             if self.extra_args:
                 command_str = ' '.join([command_str] + self.extra_args)
-        else:
-            if self.unresolved == 'warn':
+        elif self.unresolved == 'warn':
                 # Warn, but still provide a substitution.
-                config.lit_config.note(
-                    'Did not find ' + tool_name + ' in %s' % search_dirs)
-                command_str = os.path.join(
-                    config.config.llvm_tools_dir, tool_name)
-            elif self.unresolved == 'fatal':
+            config.lit_config.note(f'Did not find {tool_name}' + f' in {search_dirs}')
+            command_str = os.path.join(
+                config.config.llvm_tools_dir, tool_name)
+        elif self.unresolved == 'fatal':
                 # The function won't even return in this case, this leads to
                 # sys.exit
-                config.lit_config.fatal(
-                    'Did not find ' + tool_name + ' in %s' % search_dirs)
-            elif self.unresolved == 'break':
-                # By returning a valid result with an empty command, the
-                # caller treats this as a failure.
-                pass
-            elif self.unresolved == 'ignore':
-                # By returning None, the caller just assumes there was no
-                # match in the first place.
-                return None
-            else:
-                raise 'Unexpected value for ToolSubst.unresolved'
+            config.lit_config.fatal(f'Did not find {tool_name}' + f' in {search_dirs}')
+        elif self.unresolved == 'break':
+            # By returning a valid result with an empty command, the
+            # caller treats this as a failure.
+            pass
+        elif self.unresolved == 'ignore':
+            # By returning None, the caller just assumes there was no
+            # match in the first place.
+            return None
+        else:
+            raise 'Unexpected value for ToolSubst.unresolved'
         if command_str:
             self.was_resolved = True
         return (self.regex, tool_pipe, command_str)

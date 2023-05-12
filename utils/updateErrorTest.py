@@ -24,9 +24,7 @@ errors = []
 
 def parseErrorLine(line):
     m = re.match(r".*:(\d+):(\d+): (.*)", line)
-    if not m:
-        return None
-    return (int(m.group(1)), int(m.group(2)), m.group(3))
+    return None if not m else (int(m[1]), int(m[2]), m[3])
 
 
 def parseSource(lines):
@@ -40,10 +38,9 @@ def parseSource(lines):
         i += 1
     # Collect the source, exlcuding // CHECK: and similar lines.
     while i < len(lines):
-        if not re.match(r"^\s*//\s*(\S+):", lines[i]):
-            if lines[i].strip():
-                sourceLines[i + 1] = lines[i]
-                lastSourceLine = i + 1
+        if not re.match(r"^\s*//\s*(\S+):", lines[i]) and lines[i].strip():
+            sourceLines[i + 1] = lines[i]
+            lastSourceLine = i + 1
         i += 1
 
 
@@ -51,16 +48,14 @@ def parseErrors(lines):
     i = 0
     lastError = None
     while i < len(lines):
-        errDesc = parseErrorLine(lines[i])
-        if errDesc:
+        if errDesc := parseErrorLine(lines[i]):
             if lastError:
                 errors.append(lastError)
             lastError = (errDesc, [])
+        elif lastError:
+            lastError[1].append(lines[i])
         else:
-            if lastError:
-                lastError[1].append(lines[i])
-            else:
-                eprint("ignored error line", lines[i])
+            eprint("ignored error line", lines[i])
         i += 1
     if lastError:
         errors.append(lastError)
@@ -154,7 +149,7 @@ def main(argv):
         elif argv[argI] == "-i":
             inplace = True
         elif argv[argI].startswith("-"):
-            eprint("Invalid option '%s'. -h for help." % argv[argI])
+            eprint(f"Invalid option '{argv[argI]}'. -h for help.")
             sys.exit(1)
         else:
             if inputName:

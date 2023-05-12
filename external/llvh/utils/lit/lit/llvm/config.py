@@ -33,10 +33,7 @@ class LLVMConfig(object):
             self.with_system_environment(['SystemDrive', 'SystemRoot', 'TEMP', 'TMP'])
             self.use_lit_shell = True
 
-        # Choose between lit's internal shell pipeline runner and a real shell.  If
-        # LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
-        lit_shell_env = os.environ.get('LIT_USE_INTERNAL_SHELL')
-        if lit_shell_env:
+        if lit_shell_env := os.environ.get('LIT_USE_INTERNAL_SHELL'):
             self.use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
 
         if not self.use_lit_shell:
@@ -76,8 +73,7 @@ class LLVMConfig(object):
         if 'undefined' in sanitizers:
             features.add('ubsan')
 
-        have_zlib = getattr(config, 'have_zlib', None)
-        if have_zlib:
+        if have_zlib := getattr(config, 'have_zlib', None):
             features.add('zlib')
 
         # Check if we should run long running tests.
@@ -147,8 +143,7 @@ class LLVMConfig(object):
         if lit.util.is_string(variables):
             variables = [variables]
         for v in variables:
-            value = os.environ.get(v)
-            if value:
+            if value := os.environ.get(v):
                 self.with_environment(v, value, append_path)
 
     def clear_environment(self, variables):
@@ -166,7 +161,7 @@ class LLVMConfig(object):
             stderr = lit.util.to_string(stderr)
             return (stdout, stderr)
         except OSError:
-            self.lit_config.fatal('Could not run process %s' % command)
+            self.lit_config.fatal(f'Could not run process {command}')
 
     def feature_config(self, features):
         # Ask llvm-config about the specified feature.
@@ -198,8 +193,7 @@ class LLVMConfig(object):
             [clang, '-print-file-name=include'])
 
         if not clang_dir:
-            self.lit_config.fatal(
-                "Couldn't find the include dir for Clang ('%s')" % clang)
+            self.lit_config.fatal(f"Couldn't find the include dir for Clang ('{clang}')")
 
         clang_dir = clang_dir.strip()
         if sys.platform in ['win32'] and not self.use_lit_shell:
@@ -218,10 +212,10 @@ class LLVMConfig(object):
         clang_binary = clang.split()[0]
         version_string, _ = self.get_process_output(
             [clang_binary, '--version'])
-        if not 'clang' in version_string:
+        if 'clang' not in version_string:
             self.lit_config.warning(
-                "compiler '%s' does not appear to be clang, " % clang_binary +
-                'but test suite is configured to use sanitizers.')
+                f"compiler '{clang_binary}' does not appear to be clang, but test suite is configured to use sanitizers."
+            )
             return False
 
         if re.match(r'.*-linux', triple):
@@ -229,41 +223,35 @@ class LLVMConfig(object):
 
         if re.match(r'^x86_64.*-apple', triple):
             version_regex = re.search(r'version ([0-9]+)\.([0-9]+).([0-9]+)', version_string)
-            major_version_number = int(version_regex.group(1))
-            minor_version_number = int(version_regex.group(2))
-            patch_version_number = int(version_regex.group(3))
+            minor_version_number = int(version_regex[2])
+            patch_version_number = int(version_regex[3])
             if ('Apple LLVM' in version_string) or ('Apple clang' in version_string):
                 # Apple clang doesn't yet support LSan
                 return False
-            else:
-                return major_version_number >= 5
+            major_version_number = int(version_regex[1])
+            return major_version_number >= 5
 
         return False
 
     def make_itanium_abi_triple(self, triple):
         m = re.match(r'(\w+)-(\w+)-(\w+)', triple)
         if not m:
-            self.lit_config.fatal(
-                "Could not turn '%s' into Itanium ABI triple" % triple)
-        if m.group(3).lower() != 'windows':
-            # All non-windows triples use the Itanium ABI.
-            return triple
-        return m.group(1) + '-' + m.group(2) + '-' + m.group(3) + '-gnu'
+            self.lit_config.fatal(f"Could not turn '{triple}' into Itanium ABI triple")
+        return triple if m[3].lower() != 'windows' else f'{m[1]}-{m[2]}-{m[3]}-gnu'
 
     def make_msabi_triple(self, triple):
         m = re.match(r'(\w+)-(\w+)-(\w+)', triple)
         if not m:
-            self.lit_config.fatal(
-                "Could not turn '%s' into MS ABI triple" % triple)
-        isa = m.group(1).lower()
-        vendor = m.group(2).lower()
-        os = m.group(3).lower()
+            self.lit_config.fatal(f"Could not turn '{triple}' into MS ABI triple")
+        isa = m[1].lower()
+        vendor = m[2].lower()
+        os = m[3].lower()
         if os == 'windows' and re.match(r'.*-msvc$', triple):
             # If the OS is windows and environment is msvc, we're done.
             return triple
         if isa.startswith('x86') or isa == 'amd64' or re.match(r'i\d86', isa):
             # For x86 ISAs, adjust the OS.
-            return isa + '-' + vendor + '-windows-msvc'
+            return f'{isa}-{vendor}-windows-msvc'
         # -msvc is not supported for non-x86 targets; use a default.
         return 'i686-pc-windows-msvc'
 
@@ -308,7 +296,7 @@ class LLVMConfig(object):
                 'count'), verbatim=True, unresolved='fatal'),
             ToolSubst(r'\| \bnot\b', command=FindTool('not'), verbatim=True, unresolved='fatal')]
 
-        self.config.substitutions.append(('%python', '"%s"' % (sys.executable)))
+        self.config.substitutions.append(('%python', f'"{sys.executable}"'))
 
         self.add_tool_substitutions(
             tool_patterns, [self.config.llvm_tools_dir])
@@ -328,16 +316,15 @@ class LLVMConfig(object):
         tool = lit.util.which(name, self.config.environment['PATH'])
 
         if required and not tool:
-            message = "couldn't find '{}' program".format(name)
+            message = f"couldn't find '{name}' program"
             if search_env:
-                message = message + \
-                    ', try setting {} in your environment'.format(search_env)
+                message += f', try setting {search_env} in your environment'
             self.lit_config.fatal(message)
 
         if tool:
             tool = os.path.normpath(tool)
             if not self.lit_config.quiet and not quiet:
-                self.lit_config.note('using {}: {}'.format(name, tool))
+                self.lit_config.note(f'using {name}: {tool}')
         return tool
 
     def use_clang(self, additional_tool_dirs=[], additional_flags=[], required=True):
@@ -377,13 +364,22 @@ class LLVMConfig(object):
 
         # Tweak the PATH to include the tools dir and the scripts dir.
         # Put Clang first to avoid LLVM from overriding out-of-tree clang builds.
-        exe_dir_props = [self.config.name.lower() + '_tools_dir', 'clang_tools_dir', 'llvm_tools_dir']
+        exe_dir_props = [
+            f'{self.config.name.lower()}_tools_dir',
+            'clang_tools_dir',
+            'llvm_tools_dir',
+        ]
         paths = [getattr(self.config, pp) for pp in exe_dir_props
                  if getattr(self.config, pp, None)]
         paths = additional_tool_dirs + paths
         self.with_environment('PATH', paths, append_path=True)
 
-        lib_dir_props = [self.config.name.lower() + '_libs_dir', 'clang_libs_dir', 'llvm_shlib_dir', 'llvm_libs_dir']
+        lib_dir_props = [
+            f'{self.config.name.lower()}_libs_dir',
+            'clang_libs_dir',
+            'llvm_shlib_dir',
+            'llvm_libs_dir',
+        ]
         paths = [getattr(self.config, pp) for pp in lib_dir_props
                  if getattr(self.config, pp, None)]
 
@@ -422,8 +418,12 @@ class LLVMConfig(object):
         # The host triple might not be set, at least if we're compiling clang from
         # an already installed llvm.
         if self.config.host_triple and self.config.host_triple != '@LLVM_HOST_TRIPLE@':
-            self.config.substitutions.append(('%target_itanium_abi_host_triple',
-                                              '--target=%s' % self.make_itanium_abi_triple(self.config.host_triple)))
+            self.config.substitutions.append(
+                (
+                    '%target_itanium_abi_host_triple',
+                    f'--target={self.make_itanium_abi_triple(self.config.host_triple)}',
+                )
+            )
         else:
             self.config.substitutions.append(
                 ('%target_itanium_abi_host_triple', ''))
@@ -465,13 +465,21 @@ class LLVMConfig(object):
         """
 
         # Tweak the PATH to include the tools dir and the scripts dir.
-        exe_dir_props = [self.config.name.lower() + '_tools_dir', 'lld_tools_dir', 'llvm_tools_dir']
+        exe_dir_props = [
+            f'{self.config.name.lower()}_tools_dir',
+            'lld_tools_dir',
+            'llvm_tools_dir',
+        ]
         paths = [getattr(self.config, pp) for pp in exe_dir_props
                  if getattr(self.config, pp, None)]
         paths = additional_tool_dirs + paths
         self.with_environment('PATH', paths, append_path=True)
 
-        lib_dir_props = [self.config.name.lower() + '_libs_dir', 'lld_libs_dir', 'llvm_libs_dir']
+        lib_dir_props = [
+            f'{self.config.name.lower()}_libs_dir',
+            'lld_libs_dir',
+            'llvm_libs_dir',
+        ]
         paths = [getattr(self.config, pp) for pp in lib_dir_props
                  if getattr(self.config, pp, None)]
 

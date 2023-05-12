@@ -46,7 +46,7 @@ def main():
     @retry_while_successful(retries=args.retries)
     def chaos_mode(executable, args):
         command = [rr, "record", "--chaos", str(executable), *args]
-        print("> " + shlex.join(command))
+        print(f"> {shlex.join(command)}")
         return subprocess.check_call(command, stdout=sys.stdout, stderr=sys.stderr)
 
     chaos_mode(args.executable, args.args)

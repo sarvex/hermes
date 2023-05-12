@@ -31,6 +31,6 @@ for idx, val in enumerate(lines):
     line = line.replace("\\", "\\\\").replace("'", "\\'")
     maybe_newline = "\\n" if idx + 1 < len(lines) else ""
     if idx == 0:
-        print("var %s = '%s%s';" % (name, line, maybe_newline))
+        print(f"var {name} = '{line}{maybe_newline}';")
     else:
-        print("%s += '%s%s';" % (name, line, maybe_newline))
+        print(f"{name} += '{line}{maybe_newline}';")

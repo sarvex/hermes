@@ -40,7 +40,7 @@ def main():
 
             # Ensure the file exists before writing out anything
             if not path.exists(arg):
-                raise Exception('File "{}" doesn\'t exist'.format(arg))
+                raise Exception(f"""File "{arg}" doesn\'t exist""")
 
             o.write(
                 f'"{_filename_from_arg(arg)}" : (function(exports, require, module, internalBinding, __filename, __dirname) {{'

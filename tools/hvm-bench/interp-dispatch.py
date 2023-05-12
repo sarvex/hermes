@@ -19,4 +19,4 @@ def bench(lc, fc):
     return res
 
 
-print(bench(float(4e5), 100.0))
+print(bench(400000.0, 100.0))

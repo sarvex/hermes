@@ -2072,6 +2072,6 @@ PERMANENT_UNSUPPORTED_FEATURES = [
 # Tests for Intl features
 INTL_TESTS = ["test262/test/intl402"]
 
-assert len(set(SKIP_LIST)) == len(SKIP_LIST), "Skiplist has duplicates: " + str(
-    [item for item, count in collections.Counter(SKIP_LIST).items() if count > 1]
-)
+assert len(set(SKIP_LIST)) == len(
+    SKIP_LIST
+), f"Skiplist has duplicates: {[item for item, count in collections.Counter(SKIP_LIST).items() if count > 1]}"
